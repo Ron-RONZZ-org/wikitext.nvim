@@ -1,0 +1,236 @@
+*wikitext.txt*        Heading level shifting and section folding for wikitext
+
+                                WIKITEXT.NVIM
+
+Version: 0.1.0
+License: GPL-3.0-or-later
+Repository: https://forgejo.ronzz.org/ronzz-org/wikitext.nvim
+Mirror: https://github.com/Ron-RONZZ-org/wikitext.nvim
+
+==============================================================================
+CONTENTS                                                   *wikitext-contents*
+
+    1. Introduction .......................... |wikitext-introduction|
+    2. Requirements .......................... |wikitext-requirements|
+    3. Setup ................................. |wikitext-setup|
+    4. Options ............................... |wikitext-options|
+    5. Commands .............................. |wikitext-commands|
+    6. Mappings .............................. |wikitext-mappings|
+    7. Folding ............................... |wikitext-folding|
+    8. Lua API ............................... |wikitext-api|
+    9. Limitations ........................... |wikitext-limitations|
+   10. License ............................... |wikitext-license|
+
+==============================================================================
+1. INTRODUCTION                                        *wikitext-introduction*
+
+wikitext.nvim makes two frequent wikitext edits quick:
+
+  - Change the level of a section title, moving the whole subtree with it.
+  - Fold and unfold sections with the standard |fold-commands|, starting from
+    a fully open buffer.
+
+Everything is source-level. The plugin never fetches pages, expands templates
+or renders HTML; it only reads and rewrites heading delimiters. It complements
+(and does not replace) syntax highlighting, tree-sitter, or a language server.
+
+==============================================================================
+2. REQUIREMENTS                                        *wikitext-requirements*
+
+Neovim 0.9 or newer. The buffer must have 'filetype' set to `mediawiki`.
+
+Neovim 0.11 and newer detect `*.wiki` and `*.mw` automatically. On older
+versions, or for other extensions, add:
+
+>lua
+    vim.filetype.add({
+      extension = { wiki = "mediawiki", mw = "mediawiki" },
+    })
+<
+
+==============================================================================
+3. SETUP                                                    *wikitext-setup*
+
+>lua
+    require("wikitext").setup()
+<
+
+with lazy.nvim:
+
+>lua
+    {
+      "Ron-RONZZ-org/wikitext.nvim",
+      ft = "mediawiki",
+      opts = {},
+    }
+<
+
+setup() registers the commands, the buffer-local mappings and the folding
+autocommands. Calling it again replaces the previous configuration.
+
+==============================================================================
+4. OPTIONS                                                *wikitext-options*
+
+All options are optional; the defaults are shown below.        *wikitext-config*
+
+>lua
+    require("wikitext").setup({
+      folds = true,
+      fold_level = 5,
+      min_level = 2,
+      max_level = 6,
+      mappings = { demote = "]h", promote = "[h" },
+    })
+<
+
+  `folds`         boolean (default: true)                            *wikitext-folds*
+                  Enable section folding for mediawiki buffers.
+
+  `fold_level`    number (default: 5)                          *wikitext-fold_level*
+                  'foldlevel' applied when a buffer is opened. A `====== H6
+                  ======` nests to fold level 5, so 5 opens every section.
+                  Set 0 to start collapsed.
+
+  `min_level`     number (default: 2)                          *wikitext-min_level*
+                  Shallowest level promote may reach. MediaWiki reserves a
+                  single `=` for the page title, so 2 is the safe default.
+                  Set 1 only if your wiki uses H1 headings.
+
+  `max_level`     number (default: 6)                          *wikitext-max_level*
+                  Deepest level demote may reach.
+
+  `mappings`      table|false (default: see above)             *wikitext-mappings-opt*
+                  Keys for |wikitext-mappings|. Set to `false` to define no
+                  mappings, or set one entry to `false` to disable only it.
+
+==============================================================================
+5. COMMANDS                                              *wikitext-commands*
+
+                                                          *:HeadingInc*
+:HeadingInc [{range}]
+                  Increase the level of every heading in {range} by one.
+                  Headings nested inside a section are not touched; use
+                  |:HeadingDemoteSection| for that. With no range, the current
+                  line is used.
+
+                                                          *:HeadingDec*
+:HeadingDec [{range}]
+                  Decrease the level of every heading in {range} by one.
+
+                                                          *:HeadingDemoteSection*
+:HeadingDemoteSection
+                  Increase the level of the heading under the cursor and of
+                  every heading nested below it, until the next heading of the
+                  same or a shallower level.
+
+                                                          *:HeadingPromoteSection*
+:HeadingPromoteSection
+                  The opposite of |:HeadingDemoteSection|.
+
+A range command is all-or-nothing: when any heading in {range} would leave
+[min_level, max_level], nothing is written and an error is reported. The same
+applies to a subtree when the deepest nested heading is already at max_level.
+
+==============================================================================
+6. MAPPINGS                                              *wikitext-mappings*
+
+`.wiki` buffers get these buffer-local mappings:               *wikitext-]h*
+                                                               *wikitext-[h*
+
+    Mode    Key     Action
+    normal  ]h      |:HeadingDemoteSection|
+    normal  [h      |:HeadingPromoteSection|
+    visual  ]h      |:HeadingInc| on the selected lines
+    visual  [h      |:HeadingDec| on the selected lines
+
+The visual mappings operate line by line, not on subtrees, because a visual
+selection already expresses the exact set of headings to change.
+
+==============================================================================
+7. FOLDING                                                *wikitext-folding*
+
+Folds follow the heading tree: a `== H2 ==` starts a level 1 fold, a
+`=== H3 ===` a level 2 fold, and so on. Body text and protected regions inherit
+the surrounding section's level, so |za| on a heading collapses exactly that
+section.
+
+Buffers start fully open (|wikitext-fold_level|) and use the standard commands:
+
+    za      toggle the fold under the cursor
+    zc      close the fold under the cursor
+    zo      open the fold under the cursor
+    zR      open every fold
+    zM      close every fold
+
+Folding is implemented by a Lua 'foldexpr' (see |wikitext-api|), not by the
+runtime's mediawiki ftplugin, so it behaves identically across Neovim versions.
+Unlike a plain regex foldexpr, a heading-looking line inside <nowiki>, <pre>,
+<source>, <syntaxhighlight>, <code>, <math>, <chem>, <templatedata>, <mapframe>,
+<maplink>, <graph>, <score>, <timeline> or <hiero>, or inside an HTML comment,
+never starts a fold.
+
+The fold options are window-local. If another plugin changes 'foldmethod' for
+the buffer, restore the section folds with:
+
+>vim
+    :setlocal foldmethod=expr
+<
+
+==============================================================================
+8. LUA API                                                    *wikitext-api*
+
+>lua
+    local wikitext = require("wikitext")
+<
+
+wikitext.setup({opts})                                     *wikitext.setup()*
+                Configure the plugin. See |wikitext-options|.
+
+wikitext.heading_level({line})                        *wikitext.heading_level()*
+                Level of a heading line as a number, or nil when {line} is not
+                a heading. Comments after the closing delimiters are ignored.
+
+wikitext.shift({first}, {last}, {delta})                     *wikitext.shift()*
+                Shift every heading on lines {first}..{last} by {delta} (1-based,
+                inclusive). Returns the number of headings changed, or 0 when
+                nothing was written.
+
+wikitext.demote_section()                             *wikitext.demote_section()*
+wikitext.promote_section()                           *wikitext.promote_section()*
+                Act on the heading on the cursor line and its subtree. Return
+                the number of headings changed.
+
+==============================================================================
+9. LIMITATIONS                                        *wikitext-limitations*
+
+  - Source-level only. A template or parser function that emits a heading is
+    invisible; headings are only recognised when they appear literally.
+  - A heading must have matching leading and trailing `=` runs. `=== Title ==`
+    and `== Title` are left unchanged.
+  - A heading whose closing delimiters are followed by a tag rather than a
+    comment (e.g. `== A ==<nowiki>=</nowiki>`) is not rewritten.
+  - Levels are clamped to [min_level, max_level]; the plugin never creates
+    level 1 unless `min_level = 1`.
+  - Changes are not repeatable with |.|; press the key again.
+  - Syntax highlighting is out of scope. Use the runtime mediawiki syntax, a
+    wikitext syntax plugin, or a tree-sitter wikitext parser alongside this.
+
+==============================================================================
+10. LICENSE                                               *wikitext-license*
+
+Copyright (C) 2026 Rong Zhou and contributors.
+
+wikitext.nvim is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+wikitext.nvim is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+details.
+
+You should have received a copy of the GNU General Public License along with
+wikitext.nvim. If not, see <https://www.gnu.org/licenses/>.
+
+vim:tw=78:ts=8:noet:ft=help:norl:

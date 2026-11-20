@@ -168,6 +168,36 @@ check(
   notes[#notes]
 )
 
+-- A tag after the closing '=' run makes the line a paragraph, not a heading.
+buf = new_buffer({ "== A ==<nowiki>=</nowiki>" })
+notes = {}
+at(1)
+wikitext.demote_section()
+eq("trailing tag is not rewritten", buf_lines(buf), { "== A ==<nowiki>=</nowiki>" })
+check(
+  "trailing tag reports not a heading",
+  tostring(notes[#notes] or ""):find("not on a heading", 1, true) ~= nil,
+  notes[#notes]
+)
+check("trailing tag does not start a fold", vim.fn.foldlevel(1) == 0, vim.fn.foldlevel(1))
+
+-- The same tag before the closing '=' run is inside the title and is fine.
+buf = new_buffer({ "== A <nowiki>=</nowiki> ==" })
+vim.cmd("HeadingInc")
+eq("tag inside the title still shifts", buf_lines(buf), { "=== A <nowiki>=</nowiki> ===" })
+
+-- A line that is not a heading must not end the section for subtree moves.
+buf = new_buffer({ "== A ==", "text", "== Fake ==<nowiki>=</nowiki>", "text", "=== C ===" })
+at(1)
+wikitext.demote_section()
+eq("paragraph does not end the section", buf_lines(buf), {
+  "=== A ===",
+  "text",
+  "== Fake ==<nowiki>=</nowiki>",
+  "text",
+  "==== C ====",
+})
+
 -- ---------------------------------------------------------------------------
 -- commands and mappings
 -- ---------------------------------------------------------------------------

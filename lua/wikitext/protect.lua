@@ -80,7 +80,12 @@ local function levels(lines)
   local result = {}
   local state = { tag = nil, comment = false }
   for i, line in ipairs(lines) do
-    result[i] = heading.parse(M.visible(line, state))
+    local visible = heading.parse(M.visible(line, state))
+    -- A line that only looks like a heading once protected regions are hidden
+    -- is a paragraph in MediaWiki: the closing '=' must end the line (only
+    -- whitespace and comments may follow). Require the line as written to
+    -- parse too, so masking never invents a heading that MediaWiki lacks.
+    result[i] = visible and heading.level(line)
   end
   return result
 end

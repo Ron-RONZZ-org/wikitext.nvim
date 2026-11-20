@@ -37,7 +37,19 @@ vim.filetype.add({ extension = { wiki = "mediawiki", mw = "mediawiki" } })
 ```lua
 {
   "Ron-RONZZ-org/wikitext.nvim",
-  ft = "mediawiki",
+  -- The plugin is tiny; eager loading keeps :h wikitext available before the
+  -- first wiki buffer. Use ft = "mediawiki" instead if you prefer lazy loading.
+  lazy = false,
+  opts = {},
+}
+```
+
+The Forgejo source of truth works the same way:
+
+```lua
+{
+  "https://forgejo.ronzz.org/ronzz-org/wikitext.nvim.git",
+  lazy = false,
   opts = {},
 }
 ```

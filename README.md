@@ -1,16 +1,20 @@
 # wikitext.nvim
 
-Heading level shifting and section folding for MediaWiki wikitext, in Neovim.
+Small neovim plugin focused on efficient wikitext editing for heavy users.
 
-- `]h` / `[h` demote or promote a whole section (the heading plus every nested
-  heading), so the tree never breaks.
-- Folding starts fully open; `za` collapses the section under the cursor and
-  `zR` / `zM` do the rest.
-- Protected regions (`<nowiki>`, `<pre>`, `<source>`, `<syntaxhighlight>`,
-  `<code>`, `<math>`, comments, …) are never rewritten or folded.
-- Trailers such as `<!-- comment -->` survive a level change.
-- Commands accept ranges: `:1,20HeadingDec`.
-- Zero dependencies; a Lua foldexpr, so behaviour is identical on Neovim
+## Features
+
+- Quickly toggle heading levels: Nested subheadings handled automatically
+- Ergonomic section folding
+- (Suggest a new one, or even better, implement one and PR!)
+
+## Highlights
+
+- Protected regions: `<nowiki>`, `<pre>`, `<source>`, `<syntaxhighlight>`,
+  `<code>`, `<math>`, comments, …
+  - never risk false match inside code blocks when toggling heading levels.
+- Trailing comments `== Title == <!-- comment -->` preserved
+- Zero dependencies; whole plugin is a Lua foldexpr: consistent behaviour on Neovim
   0.9–0.11.
 
 ```text
@@ -23,12 +27,7 @@ text                                  text
 
 ## Requirements
 
-Neovim 0.9 or newer, and `filetype=mediawiki` on the buffer. Neovim 0.11
-detects `*.wiki` and `*.mw` automatically; on older versions:
-
-```lua
-vim.filetype.add({ extension = { wiki = "mediawiki", mw = "mediawiki" } })
-```
+Neovim 0.9 or newer.
 
 ## Installation
 
@@ -39,16 +38,6 @@ vim.filetype.add({ extension = { wiki = "mediawiki", mw = "mediawiki" } })
   "Ron-RONZZ-org/wikitext.nvim",
   -- The plugin is tiny; eager loading keeps :h wikitext available before the
   -- first wiki buffer. Use ft = "mediawiki" instead if you prefer lazy loading.
-  lazy = false,
-  opts = {},
-}
-```
-
-The Forgejo source of truth works the same way:
-
-```lua
-{
-  "https://forgejo.ronzz.org/ronzz-org/wikitext.nvim.git",
   lazy = false,
   opts = {},
 }
@@ -79,9 +68,25 @@ git clone https://forgejo.ronzz.org/ronzz-org/wikitext.nvim \
   ~/.local/share/nvim/site/pack/plugins/start/wikitext.nvim
 ```
 
-Then `:helptags ALL` once, if your setup does not do it automatically.
+Then run `:helptags ALL` once to load helpstrings, if your setup does not do it automatically.
+
+<blockquote>
+On neovim 0.9-0.10:
+
+```lua
+vim.filetype.add({ extension = { wiki = "mediawiki", mw = "mediawiki" } })
+```
+
+Neovim 0.11 handles `*.wiki` and `*.mw` natively so this step is unnecessary.
+</blockquote>
 
 ## Usage
+
+### Quick start
+
+```
+:help wikitext
+```
 
 ### Headings
 
@@ -89,15 +94,12 @@ Put the cursor on a heading:
 
 | Key | Mode | Action |
 |-----|------|--------|
-| `]h` | normal | demote section (heading + nested headings) |
-| `[h` | normal | promote section |
+| `]h` | normal | demote heading under cursor + nested headings |
+| `[h` | normal | promote heading under cursor + nested headings |
 | `]h` | visual | increase every heading line in the selection |
 | `[h` | visual | decrease every heading line in the selection |
 
 ### Folding
-
-Folds follow the heading tree: `== H2 ==` is level 1, `=== H3 ===` level 2, …
-Opening a buffer leaves everything open, so folding is opt-in per section:
 
 | Key | Action |
 |-----|--------|
@@ -107,9 +109,7 @@ Opening a buffer leaves everything open, so folding is opt-in per section:
 | `zR` | open every fold |
 | `zM` | close every fold |
 
-The foldexpr is implemented in Lua and caches heading levels per buffer
-change. It is mask-aware, so a heading-looking line inside a code sample does
-not fold.
+Context-aware, `==` inside code snippets ignored.
 
 ### Commands
 
@@ -149,16 +149,13 @@ wikitext.promote_section()
 wikitext.shift(1, 20, 1)                -- lines 1..20, +1
 ```
 
+## Edge behaviour
+
+- Uneven title levels such as `=== Title ==` is left alone.
+
 ## Limitations
 
-- Source-level only: headings emitted by templates are invisible.
-- Matching `=` runs required; `=== Title ==` is left alone.
-- A closing `=` run followed by a tag (e.g. `== A ==<nowiki>=</nowiki>`) makes
-  the line a paragraph in MediaWiki too, so it is left alone; only a trailing
-  HTML comment is preserved.
-- Not repeatable with `.`.
-- Syntax highlighting is out of scope; pair with the runtime syntax, a wikitext
-  syntax plugin, or a tree-sitter wikitext parser.
+- Commands not repeatable with `.`.
 
 `doc/wikitext.txt` is the canonical reference (`:h wikitext`); this README is
 the quick start.
@@ -166,7 +163,7 @@ the quick start.
 ## Development
 
 ```sh
-nvim --headless --clean -l tests/run.lua   # 43 checks, zero dependencies
+nvim --headless --clean -l tests/run.lua   # 43 checks. No dependencies beyond nvim itself.
 stylua --check .
 ```
 

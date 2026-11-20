@@ -83,6 +83,8 @@ Then `:helptags ALL` once, if your setup does not do it automatically.
 
 ## Usage
 
+### Headings
+
 Put the cursor on a heading:
 
 | Key | Mode | Action |
@@ -92,7 +94,24 @@ Put the cursor on a heading:
 | `]h` | visual | increase every heading line in the selection |
 | `[h` | visual | decrease every heading line in the selection |
 
-Commands:
+### Folding
+
+Folds follow the heading tree: `== H2 ==` is level 1, `=== H3 ===` level 2, …
+Opening a buffer leaves everything open, so folding is opt-in per section:
+
+| Key | Action |
+|-----|--------|
+| `za` | toggle the fold under the cursor |
+| `zc` | close the fold under the cursor |
+| `zo` | open the fold under the cursor |
+| `zR` | open every fold |
+| `zM` | close every fold |
+
+The foldexpr is implemented in Lua and caches heading levels per buffer
+change. It is mask-aware, so a heading-looking line inside a code sample does
+not fold.
+
+### Commands
 
 | Command | Description |
 |---------|-------------|
@@ -119,23 +138,6 @@ require("wikitext").setup({
 `mappings = false` disables every mapping; `mappings = { promote = false }`
 disables only one.
 
-## Folding
-
-Folds follow the heading tree: `== H2 ==` is level 1, `=== H3 ===` level 2, …
-Opening a buffer leaves everything open, so folding is opt-in per section:
-
-```
-za   toggle the fold under the cursor
-zc   close it
-zo   open it
-zR   open everything
-zM   close everything
-```
-
-The foldexpr is implemented in Lua and caches heading levels per buffer
-change. It is mask-aware, so a heading-looking line inside a code sample does
-not fold.
-
 ## Lua API
 
 ```lua
@@ -151,7 +153,9 @@ wikitext.shift(1, 20, 1)                -- lines 1..20, +1
 
 - Source-level only: headings emitted by templates are invisible.
 - Matching `=` runs required; `=== Title ==` is left alone.
-- A closing delimiter followed by a tag instead of a comment is not rewritten.
+- A closing `=` run followed by a tag (e.g. `== A ==<nowiki>=</nowiki>`) makes
+  the line a paragraph in MediaWiki too, so it is left alone; only a trailing
+  HTML comment is preserved.
 - Not repeatable with `.`.
 - Syntax highlighting is out of scope; pair with the runtime syntax, a wikitext
   syntax plugin, or a tree-sitter wikitext parser.
@@ -162,7 +166,7 @@ the quick start.
 ## Development
 
 ```sh
-nvim --headless --clean -l tests/run.lua   # 38 checks, zero dependencies
+nvim --headless --clean -l tests/run.lua   # 43 checks, zero dependencies
 stylua --check .
 ```
 

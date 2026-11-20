@@ -2,7 +2,7 @@
 
                                 WIKITEXT.NVIM
 
-Version: 0.1.0
+Version: 0.1.1
 License: GPL-3.0-or-later
 Repository: https://forgejo.ronzz.org/ronzz-org/wikitext.nvim
 Mirror: https://github.com/Ron-RONZZ-org/wikitext.nvim
@@ -150,11 +150,12 @@ selection already expresses the exact set of headings to change.
 7. FOLDING                                                *wikitext-folding*
 
 Folds follow the heading tree: a `== H2 ==` starts a level 1 fold, a
-`=== H3 ===` a level 2 fold, and so on. Body text and protected regions inherit
-the surrounding section's level, so |za| on a heading collapses exactly that
-section.
+`=== H3 ===` a level 2 fold, and so on. Body text and protected regions
+inherit the surrounding section's level, so |za| on a heading collapses
+exactly that section.
 
-Buffers start fully open (|wikitext-fold_level|) and use the standard commands:
+Buffers start fully open (|wikitext-fold_level|) and use the standard
+commands:
 
     za      toggle the fold under the cursor
     zc      close the fold under the cursor
@@ -162,12 +163,14 @@ Buffers start fully open (|wikitext-fold_level|) and use the standard commands:
     zR      open every fold
     zM      close every fold
 
-Folding is implemented by a Lua 'foldexpr' (see |wikitext-api|), not by the
-runtime's mediawiki ftplugin, so it behaves identically across Neovim versions.
-Unlike a plain regex foldexpr, a heading-looking line inside <nowiki>, <pre>,
-<source>, <syntaxhighlight>, <code>, <math>, <chem>, <templatedata>, <mapframe>,
-<maplink>, <graph>, <score>, <timeline> or <hiero>, or inside an HTML comment,
-never starts a fold.
+Folding is implemented by a Lua 'foldexpr' (see |wikitext-api|), not by
+the runtime's mediawiki ftplugin, so it behaves identically across Neovim
+versions. Unlike a plain regex foldexpr, a heading-looking line inside
+<nowiki>, <pre>, <source>, <syntaxhighlight>, <code>, <math>, <chem>,
+<templatedata>, <mapframe>, <maplink>, <graph>, <score>, <timeline> or
+<hiero>, or inside an HTML comment, never starts a fold. Likewise, a line
+whose closing `=` run is followed by a tag is a paragraph in MediaWiki and
+never starts a fold; see |wikitext-limitations|.
 
 The fold options are window-local. If another plugin changes 'foldmethod' for
 the buffer, restore the section folds with:
@@ -191,9 +194,9 @@ wikitext.heading_level({line})                        *wikitext.heading_level()*
                 a heading. Comments after the closing delimiters are ignored.
 
 wikitext.shift({first}, {last}, {delta})                     *wikitext.shift()*
-                Shift every heading on lines {first}..{last} by {delta} (1-based,
-                inclusive). Returns the number of headings changed, or 0 when
-                nothing was written.
+                Shift every heading on lines {first}..{last} by {delta}
+                (1-based, inclusive). Returns the number of headings changed,
+                or 0 when nothing was written.
 
 wikitext.demote_section()                             *wikitext.demote_section()*
 wikitext.promote_section()                           *wikitext.promote_section()*
@@ -207,8 +210,10 @@ wikitext.promote_section()                           *wikitext.promote_section()
     invisible; headings are only recognised when they appear literally.
   - A heading must have matching leading and trailing `=` runs. `=== Title ==`
     and `== Title` are left unchanged.
-  - A heading whose closing delimiters are followed by a tag rather than a
-    comment (e.g. `== A ==<nowiki>=</nowiki>`) is not rewritten.
+  - A closing `=` run followed by a tag (e.g.
+    `== A ==<nowiki>=</nowiki>`) makes the line a paragraph in MediaWiki as
+    well, so it is left alone. Only a trailing HTML comment is preserved as a
+    suffix.
   - Levels are clamped to [min_level, max_level]; the plugin never creates
     level 1 unless `min_level = 1`.
   - Changes are not repeatable with |.|; press the key again.

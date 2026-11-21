@@ -2,7 +2,7 @@
 
                                 WIKITEXT.NVIM
 
-Version: 0.1.1
+Version: 0.1.2
 License: GPL-3.0-or-later
 Repository: https://forgejo.ronzz.org/ronzz-org/wikitext.nvim
 Mirror: https://github.com/Ron-RONZZ-org/wikitext.nvim
